@@ -2,7 +2,7 @@
 	<img src="https://res.cloudinary.com/dclp2h92a/image/upload/v1756577773/ChatGPT_Image_Aug_30_2025_11_01_26_PM_i6o5k7.png" alt="Akron ORM Logo" width="180"/>
 </p>
 
-# Akron
+# AkronORM
 
 **Universal, framework-independent ORM for Python** 🚀
 
