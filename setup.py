@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as f:
 
 setup(
     name="akron",
-    version="0.2.3",  # Bump version for schema management feature
+    version="0.2.4",
     description="Universal, framework-independent ORM for Python.",
     long_description=long_description,
     long_description_content_type="text/markdown",

@@ -130,9 +130,10 @@ db.close()
 from pydantic import BaseModel
 from akron import Akron
 from akron.models import ModelMixin
+from typing import Optional
 
 class User(BaseModel, ModelMixin):
-    id: int
+    id: Optional[int] = None
     name: str
     email: str
     age: int
@@ -145,16 +146,66 @@ db = Akron("sqlite:///users.db")
 User.create_table(db)
 
 # Insert with type safety
-new_user = User(id=1, name="Bob Smith", email="bob@example.com", age=25)
-User.insert(db, new_user)
+new_user = User(name="Bob Smith", email="bob@example.com", age=25)
+user_id = User.insert(db, new_user)
 
 # Query with automatic deserialization
 users = User.find(db)  # Returns List[User]
 active_users = User.find(db, {"is_active": True})
 
 # Update and delete
-User.update(db, {"id": 1}, {"age": 26})
+User.update(db, {"id": user_id}, {"age": 26})
 User.delete(db, {"email": "bob@example.com"})
+```
+
+### Django-like Foreign Keys
+
+```python
+from pydantic import BaseModel
+from akron.models import ModelMixin
+from typing import Optional
+
+class User(BaseModel, ModelMixin):
+    id: Optional[int] = None
+    name: str
+    email: str
+
+class Post(BaseModel, ModelMixin):
+    id: Optional[int] = None
+    title: str
+    content: str
+    author_id: int
+    category_id: Optional[int] = None
+    published: bool = False
+    
+    # 🔥 Django-like foreign key definitions - Simple and clean!
+    __foreign_keys__ = {
+        'author_id': 'users.id',
+        'category_id': 'categories.id'
+    }
+
+class Comment(BaseModel, ModelMixin):
+    id: Optional[int] = None
+    post_id: int
+    author_name: str
+    content: str
+    
+    __foreign_keys__ = {
+        'post_id': 'posts.id'
+    }
+
+# Create tables with automatic foreign key constraints
+db = Akron("sqlite:///blog.db")
+User.create_table(db)    # Creates users table
+Post.create_table(db)    # Creates posts table with foreign keys to users
+Comment.create_table(db) # Creates comments table with foreign key to posts
+
+# Use normally with full type safety and relationship validation
+user = User(name="Alice", email="alice@example.com")
+user_id = User.insert(db, user)
+
+post = Post(title="Hello World", content="...", author_id=user_id, published=True)
+Post.insert(db, post)
 ```
 
 ---
