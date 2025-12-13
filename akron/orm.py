@@ -8,6 +8,67 @@ from .core.base import QueryBuilder
 from .exceptions import UnsupportedDriverError, AkronError
 
 
+class Record:
+    """Wrapper class for database records that allows dot notation access."""
+    
+    def __init__(self, data: Dict[str, Any]):
+        self._data = data
+    
+    def __getattr__(self, key: str) -> Any:
+        """Allow attribute access like user.name"""
+        if key.startswith('_'):
+            return object.__getattribute__(self, key)
+        try:
+            return self._data[key]
+        except KeyError:
+            raise AttributeError(f"Record has no attribute '{key}'")
+    
+    def __setattr__(self, key: str, value: Any) -> None:
+        """Allow setting attributes like user.name = 'Alice'"""
+        if key.startswith('_'):
+            object.__setattr__(self, key, value)
+        else:
+            self._data[key] = value
+    
+    def __getitem__(self, key: str) -> Any:
+        """Allow dictionary-style access like user['name']"""
+        return self._data[key]
+    
+    def __setitem__(self, key: str, value: Any) -> None:
+        """Allow dictionary-style setting like user['name'] = 'Alice'"""
+        self._data[key] = value
+    
+    def __contains__(self, key: str) -> bool:
+        """Support 'in' operator"""
+        return key in self._data
+    
+    def __repr__(self) -> str:
+        return f"Record({self._data})"
+    
+    def __str__(self) -> str:
+        return str(self._data)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert Record back to a plain dictionary."""
+        return self._data.copy()
+    
+    def get(self, key: str, default: Any = None) -> Any:
+        """Get value with a default like dict.get()"""
+        return self._data.get(key, default)
+    
+    def keys(self):
+        """Return dictionary keys."""
+        return self._data.keys()
+    
+    def values(self):
+        """Return dictionary values."""
+        return self._data.values()
+    
+    def items(self):
+        """Return dictionary items."""
+        return self._data.items()
+
+
 class Akron:
     """
     Universal Python ORM with simple, intuitive syntax.
@@ -53,7 +114,7 @@ class Akron:
         elif url.startswith("mysql://"):
             from .core.mysql_driver import MySQLDriver
             return MySQLDriver(url)
-        elif url.startswith("postgres://"):
+        elif url.startswith(("postgres://", "postgresql://")):
             from .core.postgres_driver import PostgresDriver
             return PostgresDriver(url)
         elif url.startswith("mongodb://"):
@@ -75,14 +136,15 @@ class Akron:
         """Insert multiple records efficiently."""
         return self.driver.bulk_insert(table_name, data_list)
 
-    def find(self, table_name: str, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
-        """Find records with simple filters."""
-        return self.driver.find(table_name, filters)
+    def find(self, table_name: str, filters: Optional[Dict[str, Any]] = None) -> List[Record]:
+        """Find records with simple filters. Returns list of Record objects."""
+        results = self.driver.find(table_name, filters)
+        return [Record(record) for record in results]
         
-    def find_one(self, table_name: str, filters: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
-        """Find a single record."""
-        results = self.find(table_name, filters)
-        return results[0] if results else None
+    def find_one(self, table_name: str, filters: Optional[Dict[str, Any]] = None) -> Optional[Record]:
+        """Find a single record. Returns a Record object or None."""
+        results = self.driver.find(table_name, filters)
+        return Record(results[0]) if results else None
 
     def update(self, table_name: str, filters: Dict[str, Any], new_values: Dict[str, Any]) -> int:
         """Update records matching filters."""
